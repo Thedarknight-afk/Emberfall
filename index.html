@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Emberfall — Pixel RPG</title>
+<style>
+:root{--bg:#0b1018;--panel:#151e2b;--line:#39475a;--gold:#ffc66d;--text:#e9e4d7;--muted:#9ca9b9;--red:#e35f62;--green:#78d18b;--blue:#72c8f3}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top,#1b2a3b,#080c12 70%);color:var(--text);font:14px system-ui,Segoe UI,sans-serif;min-height:100vh}
+.wrap{max-width:1200px;margin:auto;padding:14px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.logo{font:900 clamp(22px,4vw,34px) Georgia,serif;color:#ffbf63;letter-spacing:3px;text-shadow:2px 3px #662d25}
+.sub{color:#aab6c4;font-size:11px;letter-spacing:3px}
+.hud{display:flex;gap:8px;flex-wrap:wrap}
+.pill,.btn{border:1px solid var(--line);background:#121b27;color:var(--text);border-radius:7px;padding:8px 11px}
+.pill strong{color:var(--gold)}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:12px}
+.gamebox,.panel{border:1px solid var(--line);background:linear-gradient(150deg,#182333,#0e151f);border-radius:10px;box-shadow:0 10px 28px #0007;overflow:hidden}
+.canvaswrap{position:relative;background:#080d13;padding:8px}
+.canvaswrap canvas{display:block;width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;border:1px solid #46566a;border-radius:4px}
+.canvaslabel{position:absolute;left:18px;top:16px;background:#0a101bdc;border:1px solid #596579;padding:5px 8px;border-radius:5px;font-size:12px;color:#ffe1a4}
+.controls{display:flex;gap:7px;flex-wrap:wrap;padding:10px;border-top:1px solid #344154}
+.btn{cursor:pointer;font-weight:700;transition:.12s}
+.btn:hover{border-color:var(--gold);transform:translateY(-1px)}
+.btn.primary{background:#65401f;border-color:#c58a42;color:#fff0cf}
+.btn.danger{border-color:#81454a}
+.side{display:flex;flex-direction:column;gap:12px}
+.panel{padding:12px}
+.panel h3{margin:0 0 10px;color:var(--gold);font-size:13px;letter-spacing:1.5px;text-transform:uppercase}
+.hero{display:flex;gap:10px;align-items:center}
+.portrait{width:70px;height:82px;flex:none;background:#0b121c;border:1px solid #40516a;border-radius:6px;display:grid;place-items:center}
+.portrait canvas{width:64px;height:76px;image-rendering:pixelated}
+.statline{display:flex;justify-content:space-between;margin:5px 0;color:#c5cfda;font-size:12px}
+.bar{height:8px;background:#080d13;border:1px solid #374458;border-radius:5px;overflow:hidden;margin:3px 0 8px}
+.bar i{display:block;height:100%;width:50%;background:var(--green)}
+.bar.hp i{background:linear-gradient(90deg,#b93b49,#f47767)}
+.bar.mp i{background:linear-gradient(90deg,#287ac6,#76d9ff)}
+.bar.xp i{background:linear-gradient(90deg,#7b4dc1,#d59aff)}
+.small{font-size:12px;color:var(--muted);line-height:1.45}
+.list{display:flex;flex-direction:column;gap:6px}
+.item{display:flex;align-items:center;gap:8px;padding:7px;background:#0d1520;border:1px solid #29384b;border-radius:6px}
+.ico{font-size:21px;width:26px;text-align:center}
+.item b{display:block;font-size:12px}
+.item small{color:var(--muted);font-size:11px}
+.rarity-common{color:#d4dbe2}
+.rarity-uncommon{color:#6fe09a}
+.rarity-rare{color:#72c8f3}
+.rarity-epic{color:#d29aff}
+.log{max-height:150px;overflow:auto;font-size:12px;color:#b9c6d4;line-height:1.5}
+.log div{border-bottom:1px solid #253244;padding:4px 0}
+.quest{padding:8px;background:#0d1520;border-radius:6px;border:1px solid #29384b;margin-bottom:6px}
+.quest b{color:#ffe0a1}
+.mobilepad{display:none;grid-template-columns:repeat(3,44px);gap:4px;justify-content:center;padding:10px}
+.mobilepad button{height:38px}
+.overlay{position:absolute;inset:8px;background:#060a10d9;display:none;align-items:center;justify-content:center;padding:16px}
+.overlay.show{display:flex}
+.modal{width:min(540px,100%);max-height:100%;overflow:auto;background:#121c29;border:2px solid #7d603f;border-radius:10px;padding:16px;box-shadow:0 0 40px #000b}
+.modal h2{margin:0 0 8px;color:var(--gold);font:700 25px Georgia,serif}
+.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.classcard{border:1px solid #40516a;background:#0b121b;border-radius:7px;padding:10px;cursor:pointer;text-align:center}
+.classcard:hover,.classcard.selected{border-color:var(--gold);background:#2c251d}
+.classcard .big{font-size:36px}
+.classcard b{display:block;color:var(--gold);margin:5px}
+.combathead{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.enemybig{font-size:46px}
+.combatbuttons{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.footer{padding:10px;text-align:center;color:#66788c;font-size:11px}
+@media(max-width:850px){.layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.side .wide{grid-column:1/-1}.mobilepad{display:grid}.top{align-items:flex-start;flex-direction:column}}
+@media(max-width:500px){.side{grid-template-columns:1fr}.side .wide{grid-column:auto}.wrap{padding:7px}.choices{grid-template-columns:1fr}.hero{align-items:flex-start}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+<div><div class="logo">EMBERFALL</div><div class="sub">A PIXEL-ART DUNGEON RPG</div></div>
+<div class="hud">
+<div class="pill">Floor <strong id="floorTag">1</strong></div>
+<div class="pill">Level <strong id="levelTag">1</strong></div>
+<div class="pill">Gold <strong id="goldTag">0</strong> ◆</div>
+<button class="btn" id="saveBtn">Save</button>
+<button class="btn" id="loadBtn">Load</button>
+</div>
+</header>
+
+<div class="layout">
+<main class="gamebox">
+<div class="canvaswrap">
+<canvas id="world" width="768" height="480" aria-label="Emberfall game world"></canvas>
+<div class="canvaslabel" id="locationLabel">THE WHISPERING GROVE</div>
+
+<div class="overlay show" id="startOverlay">
+<div class="modal">
+<h2>Awaken, adventurer.</h2>
+<p class="small">The Emberheart has gone dark. Choose your path and explore the fallen realms.</p>
+<div class="choices">
+<div class="classcard selected" data-class="warrior"><div class="big">🛡️</div><b>Warrior</b><small>Durable fighter · heavy strikes</small></div>
+<div class="classcard" data-class="rogue"><div class="big">🗡️</div><b>Rogue</b><small>Quick attacks · critical hits</small></div>
+<div class="classcard" data-class="mage"><div class="big">🔮</div><b>Mage</b><small>Arcane bolts · stronger spells</small></div>
+</div>
+<button class="btn primary" id="startBtn">Begin Adventure</button>
+<button class="btn" id="continueBtn">Load Saved Hero</button>
+<p class="small">Move with WASD or arrow keys. Walk into enemies to fight. Walk into chests, signs, and stairs to interact.</p>
+</div>
+</div>
+
+<div class="overlay" id="combatOverlay">
+<div class="modal">
+<div class="combathead"><div><h2 id="enemyName">Goblin Scout</h2><div class="small" id="enemyDesc">A scavenger guarding the path.</div></div><div class="enemybig" id="enemyEmoji">👺</div></div>
+<div class="statline"><span>Enemy health</span><strong id="enemyHpText">24 / 24</strong></div>
+<div class="bar hp"><i id="enemyHpBar"></i></div>
+<p id="combatText" class="small">The enemy blocks your path!</p>
+<div class="combatbuttons">
+<button class="btn primary" id="attackBtn">⚔ Attack</button>
+<button class="btn" id="skillBtn">✨ Skill</button>
+<button class="btn" id="potionBtn">🧪 Potion</button>
+<button class="btn" id="runBtn">↗ Retreat</button>
+</div>
+</div>
+</div>
+
+<div class="overlay" id="messageOverlay">
+<div class="modal"><h2 id="messageTitle">Found something!</h2><p id="messageBody"></p><button class="btn primary" id="messageOk">Continue</button></div>
+</div>
+</div>
+
+<div class="controls">
+<button class="btn" id="interactBtn">✦ Interact</button>
+<button class="btn" id="mapBtn">🗺 Map</button>
+<button class="btn" id="inventoryBtn">🎒 Inventory</button>
+<button class="btn" id="questBtn">📜 Quests</button>
+<button class="btn" id="newBtn">↻ New Run</button>
+</div>
+
+<div class="mobilepad">
+<span></span><button class="btn" data-move="0,-1">▲</button><span></span>
+<button class="btn" data-move="-1,0">◀</button>
+<button class="btn" data-move="0,1">▼</button>
+<button class="btn" data-move="1,0">▶</button>
+</div>
+</main>
+
+<aside class="side">
+<section class="panel">
+<h3>Character</h3>
+<div class="hero">
+<div class="portrait"><canvas id="portrait" width="64" height="76"></canvas></div>
+<div style="flex:1">
+<b id="heroName">Ash the Wayfarer</b>
+<div class="small" id="heroClass">Level 1 Warrior</div>
+<div class="statline"><span>HP</span><strong id="hpText">80 / 80</strong></div><div class="bar hp"><i id="hpBar"></i></div>
+<div class="statline"><span>Mana</span><strong id="mpText">20 / 20</strong></div><div class="bar mp"><i id="mpBar"></i></div>
+<div class="statline"><span>XP</span><strong id="xpText">0 / 40</strong></div><div class="bar xp"><i id="xpBar"></i></div>
+</div>
+</div>
+<div class="statline"><span>Attack</span><strong id="atkText">10</strong></div>
+<div class="statline"><span>Defense</span><strong id="defText">3</strong></div>
+</section>
+
+<section class="panel"><h3>Equipment & Pack</h3><div class="list" id="inventoryList"><div class="item"><span class="ico">🗡️</span><div><b>Worn blade</b><small>Common weapon · +2 attack</small></div></div><div class="item"><span class="ico">🧪</span><div><b>Health potion ×2</b><small>Restores 30 HP</small></div></div></div></section>
+
+<section class="panel">
+<h3>Quest Journal</h3>
+<div class="quest"><b>1. A Spark in the Dark</b><div class="small" id="questProgress">Find the old shrine in the grove. 0/1</div></div>
+<div class="quest"><b>2. Thin the Pack</b><div class="small" id="killProgress">Defeat 3 creatures. 0/3</div></div>
+</section>
+
+<section class="panel wide"><h3>Adventure Log</h3><div class="log" id="log"></div></section>
+</aside>
+</div>
+<div class="footer">EMBERFALL · Single-file browser RPG · Progress saves in this browser</div>
+</div>
+
+<script>
+(()=>{
+'use strict';
+const c=document.getElementById('world'),ctx=c.getContext('2d'),pctx=document.getElementById('portrait').getContext('2d');
+ctx.imageSmoothingEnabled=false;pctx.imageSmoothingEnabled=false;
+const TS=32,COLS=24,ROWS=15;
+let selectedClass='warrior',started=false,combat=null,overlayMsg=false,frame=0,keys={},logEntries=[];
+const classes={
+warrior:{name:'Warrior',hp:100,mp:20,atk:13,def:5,skill:'Power Strike',skillCost:5,color:'#c9a06c'},
+rogue:{name:'Rogue',hp:78,mp:28,atk:11,def:3,skill:'Shadow Flurry',skillCost:7,color:'#80c58a'},
+mage:{name:'Mage',hp:70,mp:45,atk:8,def:2,skill:'Ember Bolt',skillCost:8,color:'#78bff0'}
+};
+const maps=[
+{name:'THE WHISPERING GROVE',floor:'#1b392b',wall:'#12251f',accent:'#52804d',ground:'#294936',kind:'grove'},
+{name:'THE SUNKEN CRYPT',floor:'#303744',wall:'#171c27',accent:'#7c8a9c',ground:'#414957',kind:'crypt'},
+{name:'THE ASHEN KEEP',floor:'#4b2924',wall:'#261719',accent:'#d16b3c',ground:'#65362c',kind:'keep'}
+];
+let s={name:'Ash the Wayfarer',cls:'warrior',x:2,y:12,floor:0,level:1,xp:0,gold:12,hp:100,maxHp:100,mp:20,maxMp:20,atk:13,def:5,potions:2,kills:0,shrine:false,weapon:'Worn blade',weaponBonus:2,armor:'Travel leathers',armorBonus:1,dead:false,opened:[]};
+let world=[];
+const rand=n=>Math.floor(Math.random()*n);
+
+function say(t){
+ logEntries.unshift(t);logEntries=logEntries.slice(0,24);
+ document.getElementById('log').innerHTML=logEntries.map(x=>'<div>'+x+'</div>').join('');
+}
+
+function parseMap(){
+ world=Array.from({length:ROWS},(_,y)=>Array.from({length:COLS},(_,x)=>({x,y,wall:x===0||y===0||x===COLS-1||y===ROWS-1||Math.random()<.07,entity:null})));
+ for(let y=1;y<ROWS-1;y++)for(let x=1;x<COLS-1;x++)world[y][x].wall=false;
+ for(let x=3;x<20;x++)if(x!==7&&x!==8&&x!==15)world[5][x].wall=true;
+ for(let y=3;y<12;y++)if(y!==7&&y!==8&&y!==10)world[y][10].wall=true;
+ s.x=2;s.y=12;world[s.y][s.x].wall=false;
+ const put=(x,y,entity,enemy)=>{world[y][x].wall=false;world[y][x].entity=entity;if(enemy)world[y][x].enemy=enemy};
+ put(5,10,'enemy',{kind:'goblin',name:'Goblin Scout',hp:26,maxHp:26,atk:7,xp:14});
+ put(8,3,'enemy',{kind:'slime',name:'Moss Slime',hp:22,maxHp:22,atk:5,xp:12});
+ put(14,8,'enemy',{kind:'skeleton',name:'Crypt Skeleton',hp:32,maxHp:32,atk:9,xp:18});
+ put(19,3,'chest');put(19,11,'shrine');put(21,2,'stairs');
+ if(s.floor===2)put(20,11,'boss',{kind:'boss',name:'Cinder Warden',hp:100,maxHp:100,atk:13,xp:80});
+ for(let i=0;i<12;i++){
+  let x=2+rand(19),y=2+rand(10);
+  if(!world[y][x].entity&&!world[y][x].wall)put(x,y,Math.random()>.5?'tree':'rock');
+ }
+}
+
+function drawTile(x,y,t){
+ let m=maps[s.floor];
+ ctx.fillStyle=m.floor;ctx.fillRect(x*TS,y*TS,TS,TS);
+ ctx.fillStyle=m.ground;ctx.fillRect(x*TS+2,y*TS+2,TS-4,TS-4);
+ if((x+y)%3===0){ctx.fillStyle=m.accent;ctx.fillRect(x*TS+5,y*TS+6,3,2)}
+ if(t.wall){
+  ctx.fillStyle=m.wall;ctx.fillRect(x*TS,y*TS,TS,TS);
+  ctx.fillStyle=m.accent;ctx.fillRect(x*TS+2,y*TS+3,TS-4,4);
+  ctx.fillStyle='#0005';ctx.fillRect(x*TS,y*TS+TS-5,TS,5);return;
+ }
+ if(t.entity==='tree'){
+  ctx.fillStyle='#503628';ctx.fillRect(x*TS+13,y*TS+17,7,13);
+  ctx.fillStyle=s.floor===0?'#1b653f':m.accent;
+  ctx.fillRect(x*TS+5,y*TS+3,23,19);ctx.fillRect(x*TS+2,y*TS+9,28,12);
+ }
+ if(t.entity==='rock'){
+  ctx.fillStyle='#6c7580';ctx.fillRect(x*TS+7,y*TS+13,18,13);
+  ctx.fillStyle='#9ca7b2';ctx.fillRect(x*TS+11,y*TS+10,10,5);
+ }
+ if(t.entity==='chest'){
+  ctx.fillStyle='#7b4826';ctx.fillRect(x*TS+6,y*TS+12,20,14);
+  ctx.fillStyle='#d39a47';ctx.fillRect(x*TS+6,y*TS+11,20,5);ctx.fillRect(x*TS+14,y*TS+13,4,12);
+ }
+ if(t.entity==='shrine'){
+  ctx.fillStyle='#738da3';ctx.fillRect(x*TS+8,y*TS+8,16,21);
+  ctx.fillStyle='#79ddf5';ctx.fillRect(x*TS+12,y*TS+4,8,10);
+  ctx.fillStyle='#d7faff';ctx.fillRect(x*TS+14,y*TS+6,4,6);
+ }
+ if(t.entity==='stairs'){
+  ctx.fillStyle='#111723';ctx.fillRect(x*TS+4,y*TS+8,24,20);
+  for(let i=0;i<4;i++){ctx.fillStyle='#88919b';ctx.fillRect(x*TS+6+i*2,y*TS+11+i*4,18-i*4,3)}
+ }
+ if(t.entity==='enemy'||t.entity==='boss'){
+  let e=t.enemy||{kind:'boss'};drawEnemy(x*TS+16,y*TS+16,e.kind);
+ }
+}
+
+function rect(x,y,w,h,col){ctx.fillStyle=col;ctx.fillRect(Math.round(x),Math.round(y),w,h)}
+
+function drawHero(px,py,scale=1){
+ let x=px-7*scale,y=py-10*scale,k=classes[s.cls].color;
+ rect(x+3*scale,y,8*scale,6*scale,'#d9b18a');
+ rect(x+2*scale,y-3*scale,10*scale,4*scale,k);
+ rect(x+1*scale,y+5*scale,12*scale,8*scale,k);
+ rect(x+2*scale,y+13*scale,4*scale,5*scale,'#4c5260');
+ rect(x+8*scale,y+13*scale,4*scale,5*scale,'#4c5260');
+ rect(x+5*scale,y+2*scale,2*scale,2*scale,'#1a2029');
+ rect(x+13*scale,y+5*scale,3*scale,10*scale,s.cls==='mage'?'#75d9ff':'#d4dbe4');
+ if(s.cls==='rogue')rect(x+1*scale,y+4*scale,12*scale,3*scale,'#23392b');
+ if(s.cls==='mage')rect(x+2*scale,y+1*scale,10*scale,3*scale,'#315d91');
+}
+
+function drawEnemy(px,py,kind){
+ let bob=Math.sin(frame/8)*2,x=px-8,y=py-8+bob;
+ if(kind==='goblin'){
+  rect(x+3,y,10,8,'#4a9a51');rect(x+1,y+4,14,9,'#367c43');
+  rect(x+4,y+3,2,2,'#fff2ad');rect(x+10,y+3,2,2,'#fff2ad');
+  rect(x+4,y+13,3,4,'#333a36');rect(x+10,y+13,3,4,'#333a36');
+ }else if(kind==='slime'){
+  rect(x+1,y+5,15,10,'#59c77c');rect(x+4,y+2,9,6,'#8ef0a1');
+  rect(x+4,y+8,2,2,'#102a25');rect(x+11,y+8,2,2,'#102a25');
+ }else if(kind==='skeleton'){
+  rect(x+4,y,8,8,'#d4d7cf');rect(x+3,y+8,10,8,'#a9b1b0');
+  rect(x+5,y+3,2,2,'#222a32');rect(x+10,y+3,2,2,'#222a32');
+  rect(x+4,y+11,8,2,'#333d49');
+ }else{
+  rect(x+2,y+2,12,15,'#a73b2d');rect(x+4,y-3,8,7,'#f3a54f');
+  rect(x+5,y+4,2,2,'#ffe8a3');rect(x+10,y+4,2,2,'#ffe8a3');
+ }
+}
+
+function drawPortrait(){
+ pctx.clearRect(0,0,64,76);pctx.fillStyle='#111a27';pctx.fillRect(0,0,64,76);
+ let col=classes[s.cls].color;
+ pctx.fillStyle='#d9b18a';pctx.fillRect(22,15,20,20);
+ pctx.fillStyle=col;pctx.fillRect(18,12,28,10);pctx.fillRect(17,35,30,25);
+ pctx.fillStyle='#4c5260';pctx.fillRect(20,60,9,12);pctx.fillRect(35,60,9,12);
+ pctx.fillStyle='#fff';pctx.fillRect(26,22,3,3);pctx.fillRect(36,22,3,3);
+ pctx.fillStyle=s.cls==='mage'?'#8ee7ff':'#d9dce0';pctx.fillRect(45,36,6,21);
+}
+
+function draw(){
+ frame++;ctx.clearRect(0,0,c.width,c.height);
+ if(!world.length){requestAnimationFrame(draw);return}
+ for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)drawTile(x,y,world[y][x]);
+ for(let i=0;i<6;i++){
+  let x=(i*131+frame*0.3)%c.width,y=(i*71+Math.sin(frame/17+i)*14)%c.height;
+  ctx.fillStyle='rgba(255,170,72,.55)';ctx.fillRect(x,y,2,2);
+ }
+ drawHero(s.x*TS+16,s.y*TS+16);
+ if(s.floor===0){
+  ctx.fillStyle='#ffca68';ctx.fillRect(19*TS+15,11*TS+10,3,3);
+  ctx.fillRect(19*TS+10,11*TS+15,3,3);
+ }
+ drawPortrait();requestAnimationFrame(draw);
+}
+
+function move(dx,dy){
+ if(!started||combat||overlayMsg)return;
+ let x=s.x+dx,y=s.y+dy;
+ if(!world[y]||!world[y][x])return;
+ let t=world[y][x];if(t.wall)return;
+ if(t.entity==='enemy'||t.entity==='boss'){startCombat(t);return}
+ if(t.entity==='tree'||t.entity==='rock')return;
+ if(t.entity==='chest'){openChest(t);return}
+ if(t.entity==='shrine'){
+  if(!s.shrine){
+   s.shrine=true;s.hp=s.maxHp;s.mp=s.maxMp;
+   say('The old shrine glows. Your health and mana are restored!');
+   showMessage('Shrine Rekindled','The ancient stone hums with power. Your quest is complete, and you are fully restored.');
+  }else say('The shrine is quiet now.');
+  return;
+ }
+ if(t.entity==='stairs'){
+  if(s.floor<2){
+   s.floor++;parseMap();document.getElementById('locationLabel').textContent=maps[s.floor].name;
+   say('Descended into '+maps[s.floor].name+'.');updateUI();
+  }else say('The deepest floor lies ahead.');
+  return;
+ }
+ s.x=x;s.y=y;updateUI();
+}
+
+function openChest(t){
+ if(!s.opened.includes(s.floor+':'+t.x+':'+t.y)){
+  s.opened.push(s.floor+':'+t.x+':'+t.y);t.entity=null;
+  let roll=Math.random(),gold=10+Math.floor(Math.random()*20);
+  if(roll<.55){s.gold+=gold;say('Chest opened: '+gold+' gold.')}
+  else if(roll<.75){s.potions++;say('Chest opened: found a health potion.')}
+  else{
+   let bonus=2+Math.floor(Math.random()*4);s.weaponBonus+=bonus;
+   s.weapon=roll>.92?'Moonlit edge':'Grove-forged blade';
+   say('Treasure! '+s.weapon+' gives +'+bonus+' attack.');
+   showMessage('Rare Treasure!',s.weapon+'\nYour attack increases by '+bonus+'.');
+  }
+  updateUI();
+ }
+}
+
+function startCombat(cell){
+ let original=cell.enemy||{
+  kind:cell.entity==='boss'?'boss':(s.floor===1?'skeleton':Math.random()>.5?'goblin':'slime'),
+  name:cell.entity==='boss'?'Cinder Warden':s.floor===1?'Crypt Skeleton':Math.random()>.5?'Goblin Scout':'Moss Slime',
+  hp:cell.entity==='boss'?100:20+s.floor*8,maxHp:cell.entity==='boss'?100:20+s.floor*8,
+  atk:6+s.floor*3,xp:cell.entity==='boss'?80:12+s.floor*4
+ };
+ combat={cell,enemy:{...original},x:cell.x,y:cell.y};
+ document.getElementById('combatOverlay').classList.add('show');
+ document.getElementById('enemyName').textContent=combat.enemy.name;
+ document.getElementById('enemyEmoji').textContent=({goblin:'👺',slime:'🟢',skeleton:'💀',boss:'🔥'})[combat.enemy.kind]||'👹';
+ document.getElementById('enemyDesc').textContent=combat.enemy.kind==='boss'?'An ancient guardian burning with the last ember.':'It lunges as you enter its territory.';
+ document.getElementById('combatText').textContent='The '+combat.enemy.name+' blocks your path!';
+ updateCombat();say('Encountered '+combat.enemy.name+'.');
+}
+
+function updateCombat(){
+ if(!combat)return;
+ let e=combat.enemy;
+ document.getElementById('enemyHpText').textContent=Math.max(0,e.hp)+' / '+e.maxHp;
+ document.getElementById('enemyHpBar').style.width=Math.max(0,e.hp/e.maxHp*100)+'%';
+ document.getElementById('skillBtn').textContent='✨ '+classes[s.cls].skill+' ('+classes[s.cls].skillCost+' MP)';
+ document.getElementById('potionBtn').textContent='🧪 Potion ×'+s.potions;
+}
+
+function enemyTurn(){
+ if(!combat)return;
+ let e=combat.enemy,dmg=Math.max(1,e.atk-s.def-Math.floor(Math.random()*3));
+ s.hp=Math.max(0,s.hp-dmg);
+ document.getElementById('combatText').textContent=e.name+' hits you for '+dmg+' damage.';
+ if(s.hp<=0){
+  s.hp=1;s.dead=true;combat=null;
+  document.getElementById('combatOverlay').classList.remove('show');
+  showMessage('Knocked Out','You barely escape with 1 HP. The grove gives you another chance.');
+  s.x=2;s.y=
